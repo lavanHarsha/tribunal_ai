@@ -17,10 +17,12 @@ export type JudgeVerdict = {
   winner: Role | 'draw'
   /** 0-100 integer confidence in the verdict. */
   confidence: number
-  /** Concise headline verdict shown as the Judge's title. */
+  /** Short headline verdict (a few words) shown as the Judge's title. */
   verdict: string
-  /** Longer synthesis explaining the decision. */
-  reasoning: string
+  /** The proper synthesis: a clear 3-5 sentence summary shown first. */
+  summary: string
+  /** The Judge's own reasoned takeaways, revealed below the summary. */
+  keyPoints: string[]
   strongestArgument: string
   weakestArgument: string
   keyDisagreement: string
@@ -32,6 +34,9 @@ export type JudgeVerdict = {
  * The frontend consumes these without any knowledge of the model layer.
  */
 export type DebateEvent =
+  | { type: 'triage_start' }
+  | { type: 'proposition_ready'; original: string; refined: string; title: string }
+  | { type: 'chat_reply'; message: string; suggestions: string[] }
   | { type: 'agent_start'; agent: Role }
   | { type: 'agent_chunk'; agent: Role; text: string }
   | { type: 'agent_complete'; agent: Role }

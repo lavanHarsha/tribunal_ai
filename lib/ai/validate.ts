@@ -1,5 +1,6 @@
 import { MAX_PROPOSITION_LENGTH } from './config'
 import { isRole, type Role } from './types'
+import type { PeerArguments } from './agents'
 
 export type PropositionResult =
   | { ok: true; proposition: string }
@@ -26,4 +27,22 @@ export function readProposition(body: unknown): PropositionResult {
 export function readRole(body: unknown): Role | null {
   const agent = (body as { agent?: unknown } | null)?.agent
   return isRole(agent) ? agent : null
+}
+
+/** Upper bound on a peer argument sent back for an Auditor retry. */
+const MAX_PEER_LENGTH = 6000
+
+/**
+ * Reads the optional `context` object a client sends when retrying the Auditor,
+ * so it can cross-check the same two arguments. Returns undefined when there is
+ * nothing usable; values are truncated to a safe length.
+ */
+export function readPeerContext(body: unknown): PeerArguments | undefined {
+  const ctx = (body as { context?: unknown } | null)?.context
+  if (!ctx || typeof ctx !== 'object') return undefined
+  const c = ctx as { advocate?: unknown; critic?: unknown }
+  const advocate = typeof c.advocate === 'string' ? c.advocate.slice(0, MAX_PEER_LENGTH) : ''
+  const critic = typeof c.critic === 'string' ? c.critic.slice(0, MAX_PEER_LENGTH) : ''
+  if (!advocate.trim() && !critic.trim()) return undefined
+  return { advocate, critic }
 }

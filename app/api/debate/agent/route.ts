@@ -1,6 +1,6 @@
 import { runSingleAgent } from '@/lib/ai/debate'
-import { parseJsonBody, requireApiKey, streamResponse } from '@/lib/ai/http'
-import { readProposition, readRole } from '@/lib/ai/validate'
+import { parseJsonBody, readUserApiKey, requireAnyApiKey, streamResponse } from '@/lib/ai/http'
+import { readPeerContext, readProposition, readRole } from '@/lib/ai/validate'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,8 +8,10 @@ export const maxDuration = 60
 
 /**
  * POST /api/debate/agent
- * Body: { proposition: string, agent: 'advocate' | 'critic' | 'auditor' }
- * Streams NDJSON DebateEvents for a single re-run agent (card "Retry").
+ * Body: { proposition: string, agent: 'advocate' | 'critic' | 'auditor', context?: { advocate?, critic? } }
+ * Optional header: x-gemini-api-key (BYOK).
+ * Streams NDJSON DebateEvents for a single re-run agent (card "Retry"). The
+ * optional `context` lets a retried Auditor cross-check the same two arguments.
  */
 export async function POST(req: Request) {
   const { body, error } = await parseJsonBody(req)
@@ -26,12 +28,14 @@ export async function POST(req: Request) {
     )
   }
 
-  const keyError = requireApiKey()
+  const userKey = readUserApiKey(req)
+  const keyError = requireAnyApiKey(userKey)
   if (keyError) return keyError
 
   const proposition = result.proposition
+  const peers = readPeerContext(body)
   return streamResponse(
-    (emit, signal) => runSingleAgent(proposition, role, emit, signal),
+    (emit, signal) => runSingleAgent(proposition, role, emit, signal, { apiKey: userKey }, peers),
     req.signal,
   )
 }

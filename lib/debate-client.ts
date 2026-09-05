@@ -4,6 +4,12 @@ import type { DebateEvent, Role } from './ai/types'
 
 export type EventHandler = (event: DebateEvent) => void
 
+/** Header used to forward a user's own Gemini key (BYOK). Mirrors the server. */
+const BYOK_HEADER = 'x-gemini-api-key'
+
+/** The two partisan arguments sent back when retrying the Auditor. */
+export type PeerContext = { advocate?: string; critic?: string }
+
 /** Reads an NDJSON response body and dispatches each parsed event. */
 async function consume(res: Response, onEvent: EventHandler): Promise<void> {
   if (!res.body) throw new Error('The server returned no stream.')
@@ -30,10 +36,18 @@ async function consume(res: Response, onEvent: EventHandler): Promise<void> {
   }
 }
 
-async function post(url: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+async function post(
+  url: string,
+  body: unknown,
+  signal?: AbortSignal,
+  apiKey?: string,
+): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiKey) headers[BYOK_HEADER] = apiKey
+
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
     signal,
   })
@@ -51,13 +65,14 @@ async function post(url: string, body: unknown, signal?: AbortSignal): Promise<R
   return res
 }
 
-/** Starts a full debate (three agents in parallel, then the Judge). */
+/** Starts a full debate (intake, two sides, auditor, then the Judge). */
 export async function startDebate(
   proposition: string,
   onEvent: EventHandler,
   signal?: AbortSignal,
+  apiKey?: string,
 ): Promise<void> {
-  const res = await post('/api/debate', { proposition }, signal)
+  const res = await post('/api/debate', { proposition }, signal, apiKey)
   await consume(res, onEvent)
 }
 
@@ -67,7 +82,9 @@ export async function retryAgent(
   agent: Role,
   onEvent: EventHandler,
   signal?: AbortSignal,
+  apiKey?: string,
+  context?: PeerContext,
 ): Promise<void> {
-  const res = await post('/api/debate/agent', { proposition, agent }, signal)
+  const res = await post('/api/debate/agent', { proposition, agent, context }, signal, apiKey)
   await consume(res, onEvent)
 }

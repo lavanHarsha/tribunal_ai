@@ -1,5 +1,5 @@
 import { runDebate } from '@/lib/ai/debate'
-import { parseJsonBody, requireApiKey, streamResponse } from '@/lib/ai/http'
+import { parseJsonBody, readUserApiKey, requireAnyApiKey, streamResponse } from '@/lib/ai/http'
 import { readProposition } from '@/lib/ai/validate'
 
 export const runtime = 'nodejs'
@@ -9,7 +9,10 @@ export const maxDuration = 120
 /**
  * POST /api/debate
  * Body: { proposition: string }
- * Streams NDJSON DebateEvents: three agents run concurrently, then the Judge.
+ * Optional header: x-gemini-api-key (BYOK — the user's own key, used for this
+ * request only so their usage bills to them).
+ * Streams NDJSON DebateEvents: intake/triage, then Advocate + Critic in
+ * parallel, then the Auditor (which checks both), then the Judge.
  */
 export async function POST(req: Request) {
   const { body, error } = await parseJsonBody(req)
@@ -18,9 +21,13 @@ export async function POST(req: Request) {
   const result = readProposition(body)
   if (!result.ok) return Response.json({ error: result.error }, { status: result.status })
 
-  const keyError = requireApiKey()
+  const userKey = readUserApiKey(req)
+  const keyError = requireAnyApiKey(userKey)
   if (keyError) return keyError
 
   const proposition = result.proposition
-  return streamResponse((emit, signal) => runDebate(proposition, emit, signal), req.signal)
+  return streamResponse(
+    (emit, signal) => runDebate(proposition, emit, signal, { apiKey: userKey }),
+    req.signal,
+  )
 }

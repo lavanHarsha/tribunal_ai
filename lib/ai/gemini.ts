@@ -17,12 +17,19 @@ export class MissingApiKeyError extends Error {
 
 let cached: GoogleGenAI | null = null
 
-/** Lazily constructs a single server-side Gemini client. */
-export function getClient(): GoogleGenAI {
+/**
+ * Returns a Gemini client. When `apiKey` (a user's BYOK key) is supplied, a fresh
+ * client is built for that call and never cached — so one user's key can never
+ * leak into another request. Otherwise the server key is used and cached once.
+ */
+export function getClient(apiKey?: string | null): GoogleGenAI {
+  const byok = apiKey?.trim()
+  if (byok) return new GoogleGenAI({ apiKey: byok })
+
   if (cached) return cached
-  const apiKey = getApiKey()
-  if (!apiKey) throw new MissingApiKeyError()
-  cached = new GoogleGenAI({ apiKey })
+  const serverKey = getApiKey()
+  if (!serverKey) throw new MissingApiKeyError()
+  cached = new GoogleGenAI({ apiKey: serverKey })
   return cached
 }
 
@@ -81,6 +88,8 @@ export type StreamOptions = {
   maxOutputTokens?: number
   abortSignal?: AbortSignal
   model?: string
+  /** Optional BYOK key; falls back to the server key when omitted. */
+  apiKey?: string | null
 }
 
 /**
@@ -91,7 +100,7 @@ export type StreamOptions = {
 export async function* streamText(
   opts: StreamOptions,
 ): AsyncGenerator<string, void, unknown> {
-  const client = getClient()
+  const client = getClient(opts.apiKey)
   const model = opts.model ?? GEMINI_MODEL
   let attempt = 0
   let emitted = false
@@ -137,6 +146,8 @@ export type JsonOptions = {
   maxOutputTokens?: number
   abortSignal?: AbortSignal
   model?: string
+  /** Optional BYOK key; falls back to the server key when omitted. */
+  apiKey?: string | null
 }
 
 /**
@@ -144,7 +155,7 @@ export type JsonOptions = {
  * transient failures. Returns the raw parsed value for caller-side validation.
  */
 export async function generateJson<T = unknown>(opts: JsonOptions): Promise<T> {
-  const client = getClient()
+  const client = getClient(opts.apiKey)
   const model = opts.model ?? GEMINI_MODEL
   let lastErr: unknown
 
