@@ -54,7 +54,29 @@ function winnerLabel(winner: JudgeVerdict['winner']): string {
 
 function Logo() { return <div className="brand-mark" aria-label="Tribunal home"><span>TR</span></div> }
 
-function Markdown({ text }: { text: string }) { return <div className="markdown">{text.split('\n').map((line, i) => { if (line.startsWith('## ')) return <h3 key={i}>{line.slice(3)}</h3>; if (line.startsWith('### ')) return <h4 key={i}>{line.slice(4)}</h4>; if (line.startsWith('> ')) return <blockquote key={i}>{line.slice(2)}</blockquote>; if (line.startsWith('- ')) return <li key={i}>{line.slice(2)}</li>; return line ? <p key={i}>{line}</p> : <div key={i} className="line-gap" /> })}</div> }
+function parseInlineBold(str: string) {
+  const parts = str.split(/(\*\*.*?\*\*)/g)
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return <strong key={idx}>{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
+}
+
+function Markdown({ text }: { text: string }) {
+  return (
+    <div className="markdown">
+      {text.split('\n').map((line, i) => {
+        if (line.startsWith('## ')) return <h3 key={i}>{parseInlineBold(line.slice(3))}</h3>
+        if (line.startsWith('### ')) return <h4 key={i}>{parseInlineBold(line.slice(4))}</h4>
+        if (line.startsWith('> ')) return <blockquote key={i}>{parseInlineBold(line.slice(2))}</blockquote>
+        if (line.startsWith('- ')) return <li key={i}>{parseInlineBold(line.slice(2))}</li>
+        return line ? <p key={i}>{parseInlineBold(line)}</p> : <div key={i} className="line-gap" />
+      })}
+    </div>
+  )
+}
 
 function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onClear, onOpenSettings, byokOn }: {
   open: boolean; onClose: () => void; dark: boolean; setDark: (v: boolean) => void; onNew: () => void

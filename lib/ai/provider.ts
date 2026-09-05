@@ -110,12 +110,21 @@ function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
+export function redactKeys(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/(AIzaSy[A-Za-z0-9_-]{33}|gsk_[A-Za-z0-9]{40,}|nvapi-[A-Za-z0-9_-]{40,})/gi, '[REDACTED_KEY]')
+    .replace(/(Bearer\s+)[A-Za-z0-9_.-]+/gi, '$1[REDACTED_TOKEN]')
+    .replace(/(x-gemini-api-key:\s*)[^\s,]+/gi, '$1[REDACTED_HEADER]')
+}
+
 const DEBUG = process.env.NODE_ENV !== 'production'
 function logFailure(provider: string, context: string, err: unknown) {
   if (!DEBUG) return
   const e = err as AnyError
+  const raw = String(e?.message ?? err)
   console.warn(
-    `[tribunal] ${provider}:${context} status=${statusOf(err) ?? 'n/a'} ${String(e?.message ?? err).slice(0, 300)}`,
+    `[tribunal] ${provider}:${context} status=${statusOf(err) ?? 'n/a'} ${redactKeys(raw).slice(0, 300)}`,
   )
 }
 
@@ -142,7 +151,7 @@ export function resolveTarget(opts: { apiKey?: string | null; role?: AgentStage;
 } {
   const byok = opts.apiKey?.trim()
   if (byok) {
-    // BYOK Mode: User Gemini key overrides all 4 agents
+    // BYOK Mode: User Gemini key overrides all agents
     return {
       provider: 'gemini',
       apiKey: byok,
@@ -150,31 +159,31 @@ export function resolveTarget(opts: { apiKey?: string | null; role?: AgentStage;
     }
   }
 
-  const provider = opts.provider || (opts.role ? ROLE_PROVIDER_MAP[opts.role] : 'groq')
+  const preferredProvider = opts.provider || (opts.role ? ROLE_PROVIDER_MAP[opts.role] : 'groq')
 
-  if (provider === 'groq') {
+  // Check if preferred provider is available
+  if (preferredProvider === 'groq') {
     const key = getGroqApiKey()
-    if (!key) throw new MissingProviderApiKeyError('Groq', 'GROQ_API_KEY')
-    return { provider: 'groq', apiKey: key, model: opts.model || GROQ_MODEL }
-  }
-
-  if (provider === 'nvidia') {
+    if (key) return { provider: 'groq', apiKey: key, model: opts.model || GROQ_MODEL }
+  } else if (preferredProvider === 'nvidia') {
     const key = getNvidiaApiKey()
-    if (!key) throw new MissingProviderApiKeyError('NVIDIA NIM', 'NVIDIA_API_KEY')
-    return { provider: 'nvidia', apiKey: key, model: opts.model || NVIDIA_MODEL }
+    if (key) return { provider: 'nvidia', apiKey: key, model: opts.model || NVIDIA_MODEL }
+  } else if (preferredProvider === 'gemini') {
+    const key = getGeminiApiKey()
+    if (key && !key.startsWith('AQ.')) return { provider: 'gemini', apiKey: key, model: opts.model || GEMINI_MODEL }
   }
 
-  // Gemini server mode
-  const key = getGeminiApiKey()
-  if (!key || key.startsWith('AQ.')) {
-    // If server has no valid Gemini key, fall back to Groq for default mode
-    const groqKey = getGroqApiKey()
-    if (groqKey) return { provider: 'groq', apiKey: groqKey, model: opts.model || GROQ_MODEL }
-    const nvidiaKey = getNvidiaApiKey()
-    if (nvidiaKey) return { provider: 'nvidia', apiKey: nvidiaKey, model: opts.model || NVIDIA_MODEL }
-    throw new MissingProviderApiKeyError('Gemini', 'GEMINI_API_KEY')
-  }
-  return { provider: 'gemini', apiKey: key, model: opts.model || GEMINI_MODEL }
+  // Fallback to any available configured provider
+  const groqKey = getGroqApiKey()
+  if (groqKey) return { provider: 'groq', apiKey: groqKey, model: opts.model || GROQ_MODEL }
+
+  const nvidiaKey = getNvidiaApiKey()
+  if (nvidiaKey) return { provider: 'nvidia', apiKey: nvidiaKey, model: opts.model || NVIDIA_MODEL }
+
+  const geminiKey = getGeminiApiKey()
+  if (geminiKey && !geminiKey.startsWith('AQ.')) return { provider: 'gemini', apiKey: geminiKey, model: opts.model || GEMINI_MODEL }
+
+  throw new MissingProviderApiKeyError('API Provider', 'GROQ_API_KEY / NVIDIA_API_KEY / GEMINI_API_KEY')
 }
 
 const OPENAI_ENDPOINTS: Record<'groq' | 'nvidia', string> = {
