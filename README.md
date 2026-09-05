@@ -59,7 +59,10 @@ TRIBUNAL routes each stage of the debate pipeline to a specialized provider for 
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/your-username/tribunal.git
+git clone https://github.com/lavanHarsha/tribunal_ai
+
+
+
 cd tribunal
 pnpm install
 2. Configure Environment Variables
