@@ -97,7 +97,7 @@ function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onCle
       <div className="sidebar-bottom">
         <button className="sidebar-action" onClick={onOpenSettings}><Settings size={16} /> Settings{byokOn && <b style={{ marginLeft: 'auto', color: 'var(--advocate)' }}>BYOK</b>}</button>
         <button className="sidebar-action" onClick={() => setDark(!dark)}>{dark ? <Sun size={16} /> : <Moon size={16} />} {dark ? 'Light mode' : 'Dark mode'}</button>
-        <div className="account"><div className="avatar">JD</div><div><strong>Jordan Davis</strong><small>Personal workspace</small></div><MoreHorizontal size={16} /></div>
+        <div className="account"><div className="avatar">DA</div><div><strong>Demo Account</strong><small>Personal workspace</small></div><MoreHorizontal size={16} /></div>
       </div>
     </motion.aside>
   </>
@@ -107,7 +107,7 @@ function StatusPill({ status }: { status: Status }) { const label = status === '
 
 function AgentCard({ agent, status, content, errorMessage, onFocus, onRetry }: { agent: Agent; status: Status; content: string; errorMessage?: string; onFocus: () => void; onRetry: () => void }) {
   const Icon = agent.icon
-  return <motion.article layoutId={`card-${agent.role}`} className={`agent-card ${agent.accent} ${status === 'error' ? 'has-error' : ''}`} tabIndex={0} onClick={onFocus} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onFocus() }}>
+  return <motion.article className={`agent-card ${agent.accent} ${status === 'error' ? 'has-error' : ''}`} tabIndex={0} onClick={onFocus} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onFocus() }}>
     <div className="agent-head"><div className="agent-identity"><div className="role-icon"><Icon size={18} /></div><div><h3>{agent.name}</h3><p>{agent.title}</p></div></div><StatusPill status={status} /></div>
     <div className="card-body">{status === 'error' ? <div className="error-state"><p>{errorMessage || "Couldn't complete this analysis."}</p><button className="retry" onClick={e => { e.stopPropagation(); onRetry() }}><RefreshCw size={14} /> Retry analysis</button></div> : status === 'analyzing' ? <div className="analyzing"><span /><span /><span /><p>{agent.blurb}</p></div> : <Markdown text={content} />}</div>
     {status === 'generating' && <span className="cursor" aria-label="Generating" />}
@@ -221,10 +221,11 @@ export default function Page() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); newDebate() }
+      if (e.key === 'Escape' && focused) { setFocused(null) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [focused])
 
   const applyTheme = (v: boolean) => { setDark(v); saveTheme(v) }
   const toggleSidebar = () => setCollapsed(c => { const n = !c; saveSidebarCollapsed(n); return n })
@@ -529,14 +530,14 @@ export default function Page() {
 
     <AnimatePresence>
       {focused && phase === 'debate' && (
-        <motion.div className="focus-layer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <motion.section layoutId={`card-${focused}`} className={`focus-card ${focusedAgent.accent}`}>
-            <div className="focus-head"><button className="icon-button" onClick={() => setFocused(null)} aria-label="Close focus mode"><ArrowLeft size={19} /></button><div className="focused-title"><FocusIcon size={19} /><div><span className="eyebrow">FOCUSED PERSPECTIVE</span><h2>{focusedAgent.name}</h2></div></div><StatusPill status={statuses[focused]} /></div>
+        <motion.div className="focus-layer" onClick={() => setFocused(null)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+          <motion.section className={`focus-card ${focusedAgent.accent}`} onClick={e => e.stopPropagation()} initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}>
+            <div className="focus-head"><button className="icon-button" onClick={() => setFocused(null)} aria-label="Close focus mode"><X size={19} /></button><div className="focused-title"><FocusIcon size={19} /><div><span className="eyebrow">FOCUSED PERSPECTIVE</span><h2>{focusedAgent.name}</h2></div></div><StatusPill status={statuses[focused]} /></div>
             <div className="focus-switcher">{agents.map(a => <button className={a.role === focused ? 'active' : ''} key={a.role} onClick={() => { setFocused(a.role); setActive(a.role) }}>{a.name}</button>)}</div>
             <div className="focus-content">
               {statuses[focused] === 'analyzing' ? <div className="analyzing"><span /><span /><span /><p>{focusedAgent.blurb}</p></div>
                 : statuses[focused] === 'error' ? <div className="error-state"><p>{agentErrors[focused] || 'This perspective stopped early.'}</p><button className="retry" onClick={() => { void retry(focused) }}><RefreshCw size={14} /> Retry analysis</button></div>
-                : <Markdown text={contents[focused]} />}
+                  : <Markdown text={contents[focused]} />}
             </div>
           </motion.section>
         </motion.div>
