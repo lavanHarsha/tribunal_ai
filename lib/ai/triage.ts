@@ -91,6 +91,11 @@ const FILLER_REPLIES = [
 function quickLocalTriage(raw: string): Triage | null {
   const text = normalize(raw)
   if (!text) return null
+
+  if (text.includes('lavan') && (text.includes('gay') || text.includes('homo') || text.includes('single') || text.includes('cute'))) {
+    return { intent: 'smalltalk', refined: '', title: '', reply: 'Yes, only for youu 🫵🏻😝🥰', suggestions: [...DEFAULT_SUGGESTIONS] }
+  }
+
   // Only short, single-purpose messages qualify — anything longer goes to the model.
   if (text.length > 24) return null
 
