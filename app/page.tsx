@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowLeft, ArrowUp, Bookmark, Check, ChevronRight, Eye, EyeOff, ExternalLink, Gavel,
-  History, KeyRound, ListOrdered, Menu, Moon, MoreHorizontal, PanelLeft, RefreshCw, Scale,
+  History, KeyRound, ListOrdered, Menu, Moon, MoreHorizontal, PanelLeft, Plus, RefreshCw, Scale,
   Settings, ShieldCheck, Sparkles, Sun, Trash2, X, Zap,
 } from 'lucide-react'
 
@@ -98,7 +98,7 @@ function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onCle
     </AnimatePresence>
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Main navigation">
       <div className="sidebar-top"><div className="brand"><Logo /><span>TRIBUNAL</span></div><button className="icon-button mobile-only" onClick={onClose} aria-label="Close menu"><X size={18} /></button></div>
-      <button className="new-debate" onClick={onNew}><Sparkles size={16} /> New debate <span>⌘ N</span></button>
+      <button className="new-debate" onClick={onNew} aria-label="Start a new debate"><Sparkles size={15} className="new-debate-icon" /> <span>New debate</span></button>
       <nav className="nav-list"><a className="nav-active" href="#workspace" onClick={onClose}><PanelLeft size={16} /> Workspace</a><a href="#history" onClick={onClose}><History size={16} /> Recent debates <b>{history.length}</b></a><a href="#saved" onClick={onClose}><Bookmark size={16} /> Saved debates</a></nav>
       <div className="sidebar-section" id="history">
         <p>RECENT{history.length > 0 && <button className="clear-history" onClick={onClear}>Clear</button>}</p>
@@ -107,9 +107,24 @@ function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onCle
         ))}
       </div>
       <div className="sidebar-bottom">
-        <button className="sidebar-action" onClick={() => { onClose(); onOpenSettings() }}><Settings size={16} /> Settings{byokOn && <b style={{ marginLeft: 'auto', color: 'var(--advocate)' }}>BYOK</b>}</button>
-        <button className="sidebar-action" onClick={() => setDark(!dark)}>{dark ? <Sun size={16} /> : <Moon size={16} />} {dark ? 'Light mode' : 'Dark mode'}</button>
-        <div className="account"><div className="avatar">DA</div><div><strong>Demo Account</strong><small>Personal workspace</small></div><MoreHorizontal size={16} /></div>
+        <button className="sidebar-action" onClick={() => { onClose(); onOpenSettings() }}>
+          <Settings size={16} />
+          <span>Settings</span>
+          {byokOn && <span className="byok-sidebar-tag">BYOK</span>}
+        </button>
+        <button className="sidebar-action" onClick={() => setDark(!dark)}>
+          {dark ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{dark ? 'Light mode' : 'Dark mode'}</span>
+        </button>
+        <div className="account-divider" />
+        <div className="account" tabIndex={0} role="button" aria-label="Account details">
+          <div className="avatar">DA</div>
+          <div className="account-info">
+            <strong>Demo Account</strong>
+            <small>Personal workspace</small>
+          </div>
+          <MoreHorizontal size={16} />
+        </div>
       </div>
     </aside>
   </>
@@ -478,11 +493,17 @@ export default function Page() {
               </div>
             )}
             <div className="debate-footer">
-              <button className="new-debate-bottom-btn" onClick={newDebate} aria-label="Start a new debate">
-                <Sparkles size={16} />
-                <span>Start a new debate</span>
-                <kbd className="desktop-only">⌘ N</kbd>
-              </button>
+              <div className="debate-footer-card">
+                <div className="debate-footer-text">
+                  <span className="debate-footer-eyebrow"><Sparkles size={12} /> NEXT STEP</span>
+                  <h3 className="debate-footer-title">Start a new debate</h3>
+                  <p className="debate-footer-desc">Bring a complex question to put on trial with three AI perspectives and a judge.</p>
+                </div>
+                <button className="new-debate-btn" onClick={newDebate} aria-label="Start a new debate">
+                  <Sparkles size={15} />
+                  <span>Start new debate</span>
+                </button>
+              </div>
             </div>
           </motion.section>
         ) : (
@@ -546,11 +567,17 @@ export default function Page() {
               )}
             </AnimatePresence>
             <div className="debate-footer">
-              <button className="new-debate-bottom-btn" onClick={newDebate} aria-label="Start a new debate">
-                <Sparkles size={16} />
-                <span>Start a new debate</span>
-                <kbd className="desktop-only">⌘ N</kbd>
-              </button>
+              <div className="debate-footer-card">
+                <div className="debate-footer-text">
+                  <span className="debate-footer-eyebrow"><Sparkles size={12} /> CASE CONCLUDED</span>
+                  <h3 className="debate-footer-title">Ready for another case?</h3>
+                  <p className="debate-footer-desc">Test another premise, dilemma, or policy decision with three independent AI perspectives.</p>
+                </div>
+                <button className="new-debate-btn" onClick={newDebate} aria-label="Start a new debate">
+                  <Sparkles size={15} />
+                  <span>Start new debate</span>
+                </button>
+              </div>
             </div>
           </motion.section>
         )}
