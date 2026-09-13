@@ -83,11 +83,23 @@ function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onCle
   history: SavedDebate[]; onSelect: (d: SavedDebate) => void; onClear: () => void; onOpenSettings: () => void; byokOn: boolean
 }) {
   return <>
-    <AnimatePresence>{open && <motion.button className="drawer-scrim" aria-label="Close menu" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
-    <motion.aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Main navigation" initial={false} animate={{ x: open ? 0 : undefined }}>
+    <AnimatePresence>
+      {open && (
+        <motion.button
+          className="drawer-scrim"
+          aria-label="Close menu"
+          onClick={onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        />
+      )}
+    </AnimatePresence>
+    <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Main navigation">
       <div className="sidebar-top"><div className="brand"><Logo /><span>TRIBUNAL</span></div><button className="icon-button mobile-only" onClick={onClose} aria-label="Close menu"><X size={18} /></button></div>
       <button className="new-debate" onClick={onNew}><Sparkles size={16} /> New debate <span>⌘ N</span></button>
-      <nav className="nav-list"><a className="nav-active" href="#workspace"><PanelLeft size={16} /> Workspace</a><a href="#history"><History size={16} /> Recent debates <b>{history.length}</b></a><a href="#saved"><Bookmark size={16} /> Saved debates</a></nav>
+      <nav className="nav-list"><a className="nav-active" href="#workspace" onClick={onClose}><PanelLeft size={16} /> Workspace</a><a href="#history" onClick={onClose}><History size={16} /> Recent debates <b>{history.length}</b></a><a href="#saved" onClick={onClose}><Bookmark size={16} /> Saved debates</a></nav>
       <div className="sidebar-section" id="history">
         <p>RECENT{history.length > 0 && <button className="clear-history" onClick={onClear}>Clear</button>}</p>
         {history.length === 0 ? <span className="history-empty">No debates yet</span> : history.map(item => (
@@ -95,11 +107,11 @@ function Sidebar({ open, onClose, dark, setDark, onNew, history, onSelect, onCle
         ))}
       </div>
       <div className="sidebar-bottom">
-        <button className="sidebar-action" onClick={onOpenSettings}><Settings size={16} /> Settings{byokOn && <b style={{ marginLeft: 'auto', color: 'var(--advocate)' }}>BYOK</b>}</button>
+        <button className="sidebar-action" onClick={() => { onClose(); onOpenSettings() }}><Settings size={16} /> Settings{byokOn && <b style={{ marginLeft: 'auto', color: 'var(--advocate)' }}>BYOK</b>}</button>
         <button className="sidebar-action" onClick={() => setDark(!dark)}>{dark ? <Sun size={16} /> : <Moon size={16} />} {dark ? 'Light mode' : 'Dark mode'}</button>
         <div className="account"><div className="avatar">DA</div><div><strong>Demo Account</strong><small>Personal workspace</small></div><MoreHorizontal size={16} /></div>
       </div>
-    </motion.aside>
+    </aside>
   </>
 }
 
@@ -221,11 +233,14 @@ export default function Page() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') { e.preventDefault(); newDebate() }
-      if (e.key === 'Escape' && focused) { setFocused(null) }
+      if (e.key === 'Escape') {
+        if (drawer) setDrawer(false)
+        else if (focused) setFocused(null)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [focused])
+  }, [drawer, focused])
 
   const applyTheme = (v: boolean) => { setDark(v); saveTheme(v) }
   const toggleSidebar = () => setCollapsed(c => { const n = !c; saveSidebarCollapsed(n); return n })
@@ -387,7 +402,7 @@ export default function Page() {
     setVerdict(null); setJudgeStatus('idle'); setJudgeError(null); setChat(null); setRefinedProp(''); setPhase('triaging')
     liveRef.current = null
     setDrawer(false)
-    inputRef.current?.focus()
+    setTimeout(() => { inputRef.current?.focus() }, 60)
   }
 
   const openSaved = (debate: SavedDebate) => {
@@ -417,7 +432,7 @@ export default function Page() {
   const keyPoints = verdict?.keyPoints ?? []
   const summary = verdict?.summary ?? ''
 
-  return <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
+  return <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${!submitted ? 'is-home' : ''}`}>
     <Sidebar open={drawer} onClose={() => setDrawer(false)} dark={dark} setDark={applyTheme} onNew={newDebate} history={history} onSelect={openSaved} onClear={() => setHistory(clearHistory())} onOpenSettings={() => setSettingsOpen(true)} byokOn={!!byokKey} />
     <main className="main-content" id="workspace">
       <header className="topbar">
@@ -462,6 +477,13 @@ export default function Page() {
                 {chat!.suggestions.map(s => <button key={s} onClick={() => startFromText(s)}>{s}<ArrowUp size={14} /></button>)}
               </div>
             )}
+            <div className="debate-footer">
+              <button className="new-debate-bottom-btn" onClick={newDebate} aria-label="Start a new debate">
+                <Sparkles size={16} />
+                <span>Start a new debate</span>
+                <kbd className="desktop-only">⌘ N</kbd>
+              </button>
+            </div>
           </motion.section>
         ) : (
           <motion.section className="debate-view" key="debate" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -523,6 +545,13 @@ export default function Page() {
                 </motion.section>
               )}
             </AnimatePresence>
+            <div className="debate-footer">
+              <button className="new-debate-bottom-btn" onClick={newDebate} aria-label="Start a new debate">
+                <Sparkles size={16} />
+                <span>Start a new debate</span>
+                <kbd className="desktop-only">⌘ N</kbd>
+              </button>
+            </div>
           </motion.section>
         )}
       </AnimatePresence>

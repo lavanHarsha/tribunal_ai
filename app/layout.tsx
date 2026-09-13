@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${hanken.variable} ${plexMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${fraunces.variable} ${hanken.variable} ${plexMono.variable}`}>
       <body className="antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
